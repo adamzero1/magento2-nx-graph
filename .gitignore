@@ -7,7 +7,7 @@
 
 # dependencies
 /node_modules
-/magento2
+#/magento2
 /vendor/
 
 # IDEs and editors

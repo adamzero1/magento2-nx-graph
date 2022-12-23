@@ -5,7 +5,8 @@
   "scripts": {
     "start": "nx serve",
     "build": "nx build",
-    "test": "nx test"
+    "test": "nx test",
+    "generate-workspace": "node tools/generate-workspace/index.js"
   },
   "private": true,
   "dependencies": {},

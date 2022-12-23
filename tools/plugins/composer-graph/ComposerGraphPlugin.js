@@ -4,12 +4,70 @@ exports.getProjectPath = exports.addComposerPackagesToGraphBuilderFromPath = exp
 var devkit_1 = require("@nrwl/devkit");
 var glob = require("glob");
 var fs = require("fs");
+
+const ignoredDeps = [
+    "php",
+    "lib-libxml",
+    "magento/magento-composer-installer",
+    "magento/composer-dependency-version-audit-plugin",
+    "magento/zend-cache",
+    "magento/zend-db",
+    "magento/zend-pdf",
+];
+
+var psrToProjectMap = [];
+
 function processProjectGraph(graph, context) {
+    // console.log('AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA', {
+    //     // context,
+    //     // graph,
+    //     // projects: context.workspace.projects
+    // });
     var builder = new devkit_1.ProjectGraphBuilder(graph);
-    (0, exports.addComposerPackagesToGraphBuilderFromPath)(builder, "libs");
-    (0, exports.addComposerPackagesToGraphBuilderFromPath)(builder, "magento2/app/code");
+
+
+
+    for(var projectName in context.workspace.projects){
+        let projectConfig = context.workspace.projects[projectName];
+        processProject(projectName, projectConfig, builder)
+    }
+
     return builder.getUpdatedProjectGraph();
 }
+
+var processProject = function(projectName, projectConfig, builder){
+    processComposerJson(projectName, projectConfig, builder);
+    processDiXml(projectName, projectConfig, builder);
+    processPhpSourceCode(projectName, projectConfig, builder);
+};
+
+var processComposerJson = function(projectName, projectConfig, builder){
+    // console.log('processComposerJson: %s', projectName);
+    let composerJsonPath = projectConfig.sourceRoot + '/composer.json';
+    if(!fs.existsSync(composerJsonPath)){
+        console.log('file doesn\'t exist', {composerJsonPath});
+        return;
+    }
+    let composerJson = JSON.parse(fs.readFileSync(composerJsonPath).toString());
+    if(!composerJson.require){
+        // no dependencies
+        return;
+    }
+
+    for(var dependency in composerJson.require){
+        // TODO - enable 3rd parts deps
+        if (ignoredDeps.includes(dependency) || !dependency.includes('magento')) {
+            continue;
+        }
+        // console.log('builder.addExplicitDependency(%s, %s, %s);', projectName, composerJsonPath, dependency);
+        builder.addExplicitDependency(
+            projectName,
+            composerJsonPath,
+            dependency
+        );
+    }
+}
+
 exports.processProjectGraph = processProjectGraph;
 var addComposerPackagesToGraphBuilderFromPath = function (builder, path) {
     var composerPackages = glob.sync(path + '**/**/composer.json').map(function (file) { return JSON.parse(fs.readFileSync(file).toString()); });
@@ -20,10 +78,10 @@ var addComposerPackagesToGraphBuilderFromPath = function (builder, path) {
             continue;
         }
         var ignoredDeps = [
-            "magento/framework",
-            "magento/framework-amqp",
-            "magento/framework-message-queue",
-            "magento/framework-bulk",
+            //"magento/framework",
+            // "magento/framework-amqp",
+            // "magento/framework-message-queue",
+            // "magento/framework-bulk",
             "magento/magento-composer-installer"
         ];
         for (var _a = 0, _b = Object.keys(composerPackage.require); _a < _b.length; _a++) {
